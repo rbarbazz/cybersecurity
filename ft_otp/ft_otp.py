@@ -1,19 +1,18 @@
 import argparse
-import hashlib
-import hmac
+
+from cryptography.fernet import Fernet
 
 HEX_KEY_LENGTH = 64
-ENCRYPTION_SECRET = b"42"
+ENCRYPTION_SECRET = b"v0XVPkLLfDJmKZiKFzHMO98yIk26jm0L64U3z_bRVXM="
 
 
 class TimeBasedOTP:
-    def __init__(self, key):
-        self.key = key
+    def __init__(self, raw_key: str):
+        self.raw_key = raw_key
+        self.fernet = Fernet(ENCRYPTION_SECRET)
 
     def _encrypt_key(self):
-        hmac_obj = hmac.new(ENCRYPTION_SECRET, self.key.encode(), hashlib.sha256)
-
-        return hmac_obj.hexdigest()
+        return self.fernet.encrypt(self.raw_key.encode()).decode()
 
     def write_key(self):
         with open("ft_otp.key", "w") as file:
