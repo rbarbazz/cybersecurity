@@ -1,4 +1,6 @@
 import argparse
+import hmac
+from hashlib import sha1
 
 from cryptography.fernet import Fernet
 
@@ -9,6 +11,14 @@ ENCRYPTION_SECRET = b"v0XVPkLLfDJmKZiKFzHMO98yIk26jm0L64U3z_bRVXM="
 class TimeBasedOTP:
     def __init__(self, encryption_secret: str):
         self.fernet = Fernet(encryption_secret)
+
+    @staticmethod
+    def is_hex(string: str):
+        try:
+            int(string, 16)
+            return True
+        except ValueError:
+            return False
 
     def _encrypt_key(self, key: str):
         return self.fernet.encrypt(key.encode()).decode()
@@ -22,7 +32,22 @@ class TimeBasedOTP:
 
     @staticmethod
     def generate_password(key: str):
-        return "123456"
+        counter = 0
+        password_hash = hmac.new(
+            bytes.fromhex(key), counter.to_bytes(8, byteorder="big"), sha1
+        )
+
+        digest = password_hash.digest()
+        offset = digest[-1] & 0xF
+
+        byte1 = digest[offset] & 0x7F
+        byte2 = digest[offset + 1] & 0xFF
+        byte3 = digest[offset + 2] & 0xFF
+        byte4 = digest[offset + 3] & 0xFF
+
+        bin_code = (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4
+
+        return f"{bin_code % 1_000_000:06d}"
 
 
 if __name__ == "__main__":
@@ -46,15 +71,16 @@ if __name__ == "__main__":
 
     if args.g:
         totp_key = ""
+        totp = TimeBasedOTP(ENCRYPTION_SECRET)
 
         try:
             with open(args.g, "r") as file:
-                file_content = file.read()
+                file_content = file.read().strip()
 
-                if len(file_content) == HEX_KEY_LENGTH:
+                if len(file_content) == HEX_KEY_LENGTH and totp.is_hex(file_content):
                     totp_key = file_content
         except FileNotFoundError:
-            if len(args.g) == HEX_KEY_LENGTH:
+            if len(args.g) == HEX_KEY_LENGTH and totp.is_hex(args.g):
                 totp_key = args.g
 
         if not totp_key:
@@ -63,14 +89,13 @@ if __name__ == "__main__":
                 f"error: key must be {HEX_KEY_LENGTH} hexadecimal characters.",
             )
 
-        totp = TimeBasedOTP(ENCRYPTION_SECRET)
         totp.write_key(totp_key)
     elif args.k:
         encrypted_key = ""
 
         try:
             with open(args.k, "r") as file:
-                file_content = file.read()
+                file_content = file.read().strip()
 
             encrypted_key = file_content
         except FileNotFoundError:
