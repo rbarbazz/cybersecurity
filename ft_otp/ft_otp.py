@@ -7,16 +7,22 @@ ENCRYPTION_SECRET = b"v0XVPkLLfDJmKZiKFzHMO98yIk26jm0L64U3z_bRVXM="
 
 
 class TimeBasedOTP:
-    def __init__(self, raw_key: str):
-        self.raw_key = raw_key
-        self.fernet = Fernet(ENCRYPTION_SECRET)
+    def __init__(self, encryption_secret: str):
+        self.fernet = Fernet(encryption_secret)
 
-    def _encrypt_key(self):
-        return self.fernet.encrypt(self.raw_key.encode()).decode()
+    def _encrypt_key(self, key: str):
+        return self.fernet.encrypt(key.encode()).decode()
 
-    def write_key(self):
+    def decrypt_key(self, encrypted_key: str):
+        return self.fernet.decrypt(encrypted_key.encode()).decode()
+
+    def write_key(self, key: str):
         with open("ft_otp.key", "w") as file:
-            file.write(self._encrypt_key())
+            file.write(self._encrypt_key(key))
+
+    @staticmethod
+    def generate_password(key: str):
+        return "123456"
 
 
 if __name__ == "__main__":
@@ -39,25 +45,37 @@ if __name__ == "__main__":
         )
 
     if args.g:
-        hex_key = ""
+        totp_key = ""
 
         try:
             with open(args.g, "r") as file:
                 file_content = file.read()
 
                 if len(file_content) == HEX_KEY_LENGTH:
-                    hex_key = file_content
+                    totp_key = file_content
         except FileNotFoundError:
             if len(args.g) == HEX_KEY_LENGTH:
-                hex_key = args.g
+                totp_key = args.g
 
-        if not hex_key:
+        if not totp_key:
             raise argparse.ArgumentError(
                 input_key_arg,
                 f"error: key must be {HEX_KEY_LENGTH} hexadecimal characters.",
             )
 
-        totp = TimeBasedOTP(hex_key)
-        totp.write_key()
+        totp = TimeBasedOTP(ENCRYPTION_SECRET)
+        totp.write_key(totp_key)
     elif args.k:
-        pass
+        encrypted_key = ""
+
+        try:
+            with open(args.k, "r") as file:
+                file_content = file.read()
+
+            encrypted_key = file_content
+        except FileNotFoundError:
+            encrypted_key = args.k
+
+        totp = TimeBasedOTP(ENCRYPTION_SECRET)
+        totp_key = totp.decrypt_key(encrypted_key)
+        print(totp.generate_password(totp_key))
