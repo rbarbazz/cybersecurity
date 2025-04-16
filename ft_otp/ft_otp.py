@@ -2,7 +2,7 @@ import argparse
 import hmac
 from hashlib import sha1
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 
 HEX_KEY_LENGTH = 64
 ENCRYPTION_SECRET = b"v0XVPkLLfDJmKZiKFzHMO98yIk26jm0L64U3z_bRVXM="
@@ -52,12 +52,12 @@ class TimeBasedOTP:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(prog="ft_otp")
-    input_key_arg = parser.add_argument(
+    key_arg = parser.add_argument(
         "-g",
         type=str,
         help="Raw key file path or key string used to generate encrypted key",
     )
-    parser.add_argument(
+    encrypted_key_arg = parser.add_argument(
         "-k",
         type=str,
         help="Encrypted key file path or key string used to generate a TOTP",
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     if (not args.g and not args.k) or (args.g and args.k):
         raise argparse.ArgumentError(
-            input_key_arg, "error: you must provide exactly one option."
+            key_arg, "error: you must provide exactly one option."
         )
 
     if args.g:
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
         if not totp_key:
             raise argparse.ArgumentError(
-                input_key_arg,
+                key_arg,
                 f"error: key must be {HEX_KEY_LENGTH} hexadecimal characters.",
             )
 
@@ -102,5 +102,11 @@ if __name__ == "__main__":
             encrypted_key = args.k
 
         totp = TimeBasedOTP(ENCRYPTION_SECRET)
-        totp_key = totp.decrypt_key(encrypted_key)
+        try:
+            totp_key = totp.decrypt_key(encrypted_key)
+        except InvalidToken:
+            raise argparse.ArgumentError(
+                encrypted_key_arg, "error: invalid encrypted key."
+            )
+
         print(totp.generate_password(totp_key))
