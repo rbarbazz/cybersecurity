@@ -1,6 +1,6 @@
 # ft_otp
 
-## Summary
+## Introduction
 
 In this project, the aim is to implement a TOTP (Time-based One-Time Password)
 system, which will be capable of generating ephemeral passwords from a master key.
