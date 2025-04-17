@@ -1,5 +1,6 @@
 import argparse
 import hmac
+import time
 from hashlib import sha1
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -32,9 +33,11 @@ class TimeBasedOTP:
 
     @staticmethod
     def generate_password(key: str):
-        counter = 0
+        time_step = 30
+        current_time = int(time.time())
+        time_counter = current_time // time_step
         password_hash = hmac.new(
-            bytes.fromhex(key), counter.to_bytes(8, byteorder="big"), sha1
+            bytes.fromhex(key), time_counter.to_bytes(8, byteorder="big"), sha1
         )
 
         digest = password_hash.digest()
