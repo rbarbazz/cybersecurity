@@ -8,13 +8,19 @@ from cryptography.fernet import Fernet, InvalidToken
 HEX_KEY_LENGTH = 64
 ENCRYPTION_SECRET = b"v0XVPkLLfDJmKZiKFzHMO98yIk26jm0L64U3z_bRVXM="
 
+# Potential code improvements:
+# - stricter input validation
+# - add a command to generate a new key
+
 
 class TimeBasedOTP:
     def __init__(self, encryption_secret: str):
         self.fernet = Fernet(encryption_secret)
 
     @staticmethod
-    def is_hex(string: str):
+    def is_valid_key(string: str):
+        if len(string) != HEX_KEY_LENGTH:
+            return False
         try:
             int(string, 16)
             return True
@@ -80,10 +86,10 @@ if __name__ == "__main__":
             with open(args.g, "r") as file:
                 file_content = file.read().strip()
 
-                if len(file_content) == HEX_KEY_LENGTH and totp.is_hex(file_content):
+                if totp.is_valid_key(file_content):
                     totp_key = file_content
         except FileNotFoundError:
-            if len(args.g) == HEX_KEY_LENGTH and totp.is_hex(args.g):
+            if totp.is_valid_key(args.g):
                 totp_key = args.g
 
         if not totp_key:
